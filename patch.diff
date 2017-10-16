@@ -1,0 +1,851 @@
+From 15bae55fbedc12a24e36cf1aa44a7570029f0dda Mon Sep 17 00:00:00 2001
+From: imocat <imocat@qq.com>
+Date: Sat, 30 Sep 2017 15:00:23 +0800
+Subject: [PATCH] =?UTF-8?q?=E4=BD=BF=E7=94=A8=20sendcloud=20=E5=8F=91?=
+ =?UTF-8?q?=E9=80=81=E9=82=AE=E4=BB=B6?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ jumpserver/api.py              | 35 +++++++++++++++--------------
+ jumpserver/sendcloud_notice.py | 51 ++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 69 insertions(+), 17 deletions(-)
+ create mode 100644 jumpserver/sendcloud_notice.py
+
+diff --git a/jumpserver/api.py b/jumpserver/api.py
+index ca19725..54d39b5 100644
+--- a/jumpserver/api.py
++++ b/jumpserver/api.py
+@@ -1,31 +1,31 @@
+ # coding: utf-8
+ 
+-import os, sys, time, re
+-from Crypto.Cipher import AES
+ import crypt
+-import pwd
+-from binascii import b2a_hex, a2b_hex
+-import hashlib
+ import datetime
++import hashlib
++import json
++import logging
++import pwd
+ import random
+ import subprocess
+ import uuid
+-import json
+-import logging
++from binascii import b2a_hex, a2b_hex
+ 
+-from settings import *
++from Crypto.Cipher import AES
+ from django.core.paginator import Paginator, EmptyPage, InvalidPage
+-from django.http import HttpResponse, Http404
+-from django.template import RequestContext
+-from juser.models import User, UserGroup
+-from jlog.models import Log, TtyLog
+-from jasset.models import Asset, AssetGroup
+-from jperm.models import PermRule, PermRole
+-from jumpserver.models import Setting
++from django.core.urlresolvers import reverse
++from django.http import HttpResponse
+ from django.http import HttpResponseRedirect
+ from django.shortcuts import render_to_response
+-from django.core.mail import send_mail
+-from django.core.urlresolvers import reverse
++from django.template import RequestContext
++
++from jlog.models import Log
++from jumpserver.models import Setting
++from juser.models import User, UserGroup
++from settings import *
++from jumpserver.sendcloud_notice import send_mail
++
++
+ 
+ 
+ def set_log(level, filename='jumpserver.log'):
+@@ -497,6 +497,7 @@ def defend_attack(func):
+         request.session['visit'] = request.session.get('visit', 1) + 1
+         request.session.set_expiry(300)
+         return func(request, *args, **kwargs)
++
+     return _deco
+ 
+ 
+diff --git a/jumpserver/sendcloud_notice.py b/jumpserver/sendcloud_notice.py
+new file mode 100644
+index 0000000..680afdb
+--- /dev/null
++++ b/jumpserver/sendcloud_notice.py
+@@ -0,0 +1,51 @@
++# coding: utf-8
++
++import hashlib
++import os
++
++import requests
++
++from settings import config, BASE_DIR
++
++config.read(os.path.join(BASE_DIR, 'jumpserver.conf'))
++
++accessKey = config.read('sendcloud', 'access_key')
++secretKey = config.read('sendcloud', 'secret_key')
++
++mail_url = 'http://api.notice.sendcloud.net/mailapi/send'
++
++
++def _signature(param):
++    param_keys = list(param.keys())
++    param_keys.sort()
++
++    param_str = ''
++
++    for key in param_keys:
++        param_str += key + '=' + str(param[key]) + '&'
++
++    param_str = param_str[:-1]
++
++    sign_str = secretKey + '&' + param_str + '&' + secretKey
++    signature = hashlib.md5(sign_str).hexdigest()
++
++    return signature
++
++
++def send_mail(title, msg, mail_from=None, email_to=None, fail_silently=True):
++    send(title, msg, email_to[0])
++    pass
++
++
++def send(title, msg, email_to):
++    param = {
++        'nickNames': ';'.join(email_to),
++        'accessKey': accessKey,
++        'subject': title,
++        'content': msg,
++    }
++
++    param['signature'] = _signature(param)
++
++    r = requests.get(mail_url, params=param)
++    return r.status_code == 200
+-- 
+2.2.1
+
+From 17cccf2f0af4675f3960532eebb6e4ba8e9338fe Mon Sep 17 00:00:00 2001
+From: imocat <imocat@qq.com>
+Date: Sat, 30 Sep 2017 15:05:24 +0800
+Subject: [PATCH] =?UTF-8?q?=E4=BF=AE=E6=94=B9=20sendcloud=20=E9=85=8D?=
+ =?UTF-8?q?=E7=BD=AE=E4=BF=A1=E6=81=AF=E8=8E=B7=E5=8F=96=E6=96=B9=E5=BC=8F?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ jumpserver/sendcloud_notice.py |  9 +++------
+ jumpserver/settings.py         | 11 ++++++-----
+ 2 files changed, 9 insertions(+), 11 deletions(-)
+
+diff --git a/jumpserver/sendcloud_notice.py b/jumpserver/sendcloud_notice.py
+index 680afdb..653ba9b 100644
+--- a/jumpserver/sendcloud_notice.py
++++ b/jumpserver/sendcloud_notice.py
+@@ -1,16 +1,13 @@
+ # coding: utf-8
+ 
+ import hashlib
+-import os
+ 
+ import requests
+ 
+-from settings import config, BASE_DIR
++from settings import SENDCLOUD_ACCESS_KEY, SENDCLOUD_SECRET_KEY
+ 
+-config.read(os.path.join(BASE_DIR, 'jumpserver.conf'))
+-
+-accessKey = config.read('sendcloud', 'access_key')
+-secretKey = config.read('sendcloud', 'secret_key')
++accessKey = SENDCLOUD_ACCESS_KEY
++secretKey = SENDCLOUD_SECRET_KEY
+ 
+ mail_url = 'http://api.notice.sendcloud.net/mailapi/send'
+ 
+diff --git a/jumpserver/settings.py b/jumpserver/settings.py
+index e83de85..c1aa44c 100644
+--- a/jumpserver/settings.py
++++ b/jumpserver/settings.py
+@@ -8,10 +8,9 @@ For the full list of settings and their values, see
+ https://docs.djangoproject.com/en/1.7/ref/settings/
+ """
+ 
++import ConfigParser
+ # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
+ import os
+-import ConfigParser
+-import getpass
+ 
+ config = ConfigParser.ConfigParser()
+ 
+@@ -19,6 +18,10 @@ BASE_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+ config.read(os.path.join(BASE_DIR, 'jumpserver.conf'))
+ KEY_DIR = os.path.join(BASE_DIR, 'keys')
+ 
++# sendcloud config
++SENDCLOUD_ACCESS_KEY = config.get('sendcloud', 'access_key')
++SENDCLOUD_SECRET_KEY = config.get('sendcloud', 'secret_key')
++
+ AUTH_USER_MODEL = 'juser.User'
+ # mail config
+ MAIL_ENABLE = config.get('mail', 'mail_enable')
+@@ -95,11 +98,10 @@ ROOT_URLCONF = 'jumpserver.urls'
+ 
+ WSGI_APPLICATION = 'jumpserver.wsgi.application'
+ 
+-
+ # Database
+ # https://docs.djangoproject.com/en/1.7/ref/settings/#databases
+ DATABASES = {}
+-if config.get('db', 'engine') == 'mysql': 
++if config.get('db', 'engine') == 'mysql':
+     DB_HOST = config.get('db', 'host')
+     DB_PORT = config.getint('db', 'port')
+     DB_USER = config.get('db', 'user')
+@@ -162,7 +164,6 @@ USE_L10N = True
+ 
+ USE_TZ = False
+ 
+-
+ # Static files (CSS, JavaScript, Images)
+ # https://docs.djangoproject.com/en/1.7/howto/static-files/
+ 
+-- 
+2.2.1
+
+From 530ae1201771180cd82cc0b92b191562b2d008f5 Mon Sep 17 00:00:00 2001
+From: imocat <imocat@qq.com>
+Date: Sat, 30 Sep 2017 15:10:40 +0800
+Subject: [PATCH] =?UTF-8?q?=E4=BF=AE=E5=A4=8D=E4=BD=BF=E7=94=A8pychary?=
+ =?UTF-8?q?=E6=A0=BC=E5=BC=8F=E5=8C=96=E5=90=8E=EF=BC=8C=E5=B0=86api.py?=
+ =?UTF-8?q?=E4=B8=AD=E6=B2=A1=E6=9C=89=E4=BD=BF=E7=94=A8=E7=9A=84import?=
+ =?UTF-8?q?=E5=85=A8=E9=83=A8=E7=A7=BB=E9=99=A4=E6=8E=89=E7=9A=84=20bug?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ jumpserver/api.py | 33 +++++++++++++++++----------------
+ 1 file changed, 17 insertions(+), 16 deletions(-)
+
+diff --git a/jumpserver/api.py b/jumpserver/api.py
+index 54d39b5..cca930e 100644
+--- a/jumpserver/api.py
++++ b/jumpserver/api.py
+@@ -1,29 +1,31 @@
+ # coding: utf-8
+ 
++import os, sys, time, re
++from Crypto.Cipher import AES
+ import crypt
+-import datetime
+-import hashlib
+-import json
+-import logging
+ import pwd
++from binascii import b2a_hex, a2b_hex
++import hashlib
++import datetime
+ import random
+ import subprocess
+ import uuid
+-from binascii import b2a_hex, a2b_hex
++import json
++import logging
+ 
+-from Crypto.Cipher import AES
++from settings import *
+ from django.core.paginator import Paginator, EmptyPage, InvalidPage
+-from django.core.urlresolvers import reverse
+-from django.http import HttpResponse
+-from django.http import HttpResponseRedirect
+-from django.shortcuts import render_to_response
++from django.http import HttpResponse, Http404
+ from django.template import RequestContext
+-
+-from jlog.models import Log
+-from jumpserver.models import Setting
+ from juser.models import User, UserGroup
+-from settings import *
+-from jumpserver.sendcloud_notice import send_mail
++from jlog.models import Log, TtyLog
++from jasset.models import Asset, AssetGroup
++from jperm.models import PermRule, PermRole
++from jumpserver.models import Setting
++from django.http import HttpResponseRedirect
++from django.shortcuts import render_to_response
++from sendcloud_notice import send_mail
++from django.core.urlresolvers import reverse
+ 
+ 
+ 
+@@ -497,7 +499,6 @@ def defend_attack(func):
+         request.session['visit'] = request.session.get('visit', 1) + 1
+         request.session.set_expiry(300)
+         return func(request, *args, **kwargs)
+-
+     return _deco
+ 
+ 
+-- 
+2.2.1
+
+From 8c28c799cd102ad63081740e604ebd7bd01a23ae Mon Sep 17 00:00:00 2001
+From: imocat <imocat@qq.com>
+Date: Sat, 30 Sep 2017 15:14:36 +0800
+Subject: [PATCH] =?UTF-8?q?=E8=BE=93=E5=87=BAsendcloud=E5=8F=91=E9=80=81?=
+ =?UTF-8?q?=E9=94=99=E8=AF=AF=E6=97=A5=E5=BF=97?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ jumpserver/sendcloud_notice.py | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/jumpserver/sendcloud_notice.py b/jumpserver/sendcloud_notice.py
+index 653ba9b..041eac6 100644
+--- a/jumpserver/sendcloud_notice.py
++++ b/jumpserver/sendcloud_notice.py
+@@ -45,4 +45,11 @@ def send(title, msg, email_to):
+     param['signature'] = _signature(param)
+ 
+     r = requests.get(mail_url, params=param)
+-    return r.status_code == 200
++
++    try:
++        result = r.json()
++        print("sendcloud:", result)
++    except Exception, ex:
++        print("sendcloud:ex:", ex)
++
++    return result['statusCode'] == 200
+-- 
+2.2.1
+
+From bc38fd17fd2c7d9d4d9d6212b7f3960535d4693e Mon Sep 17 00:00:00 2001
+From: imocat <imocat@qq.com>
+Date: Sat, 30 Sep 2017 15:16:12 +0800
+Subject: [PATCH] =?UTF-8?q?=E8=BE=93=E5=87=BAsendcloud=E6=97=A5=E5=BF=97?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ jumpserver/sendcloud_notice.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/jumpserver/sendcloud_notice.py b/jumpserver/sendcloud_notice.py
+index 041eac6..712a1c0 100644
+--- a/jumpserver/sendcloud_notice.py
++++ b/jumpserver/sendcloud_notice.py
+@@ -50,6 +50,6 @@ def send(title, msg, email_to):
+         result = r.json()
+         print("sendcloud:", result)
+     except Exception, ex:
+-        print("sendcloud:ex:", ex)
++        print("sendcloud:ex:", ex, param)
+ 
+     return result['statusCode'] == 200
+-- 
+2.2.1
+
+From ffc0a7b106d4db5ee4ec2e43c09ab2a4d79dbcdd Mon Sep 17 00:00:00 2001
+From: imocat <imocat@qq.com>
+Date: Sat, 30 Sep 2017 15:27:19 +0800
+Subject: [PATCH] =?UTF-8?q?=E8=B0=83=E6=95=B4=20=E5=8F=91=E9=80=81?=
+ =?UTF-8?q?=E9=82=AE=E4=BB=B6=E6=8E=A5=E5=8F=A3?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ jumpserver/sendcloud_notice.py | 62 ++++++++++++++++++++++++++++++++----------
+ 1 file changed, 47 insertions(+), 15 deletions(-)
+
+diff --git a/jumpserver/sendcloud_notice.py b/jumpserver/sendcloud_notice.py
+index 712a1c0..fb5e7a1 100644
+--- a/jumpserver/sendcloud_notice.py
++++ b/jumpserver/sendcloud_notice.py
+@@ -2,14 +2,12 @@
+ 
+ import hashlib
+ 
+-import requests
+-
+ from settings import SENDCLOUD_ACCESS_KEY, SENDCLOUD_SECRET_KEY
+ 
+ accessKey = SENDCLOUD_ACCESS_KEY
+ secretKey = SENDCLOUD_SECRET_KEY
+ 
+-mail_url = 'http://api.notice.sendcloud.net/mailapi/send'
++sendcloud_api_url = 'https://api.notice.sendcloud.net'
+ 
+ 
+ def _signature(param):
+@@ -29,27 +27,61 @@ def _signature(param):
+     return signature
+ 
+ 
+-def send_mail(title, msg, mail_from=None, email_to=None, fail_silently=True):
+-    send(title, msg, email_to[0])
++def get_user(mail):
++    param = {
++
++    }
++
++    call_sendcloud_api('/linkmanMember/list', param)
++
++
++def add_user(mail):
+     pass
+ 
+ 
+-def send(title, msg, email_to):
+-    param = {
+-        'nickNames': ';'.join(email_to),
+-        'accessKey': accessKey,
+-        'subject': title,
+-        'content': msg,
+-    }
++def update_user(mail):
++    pass
++
++
++def call_sendcloud_api(path, param):
++    """
++    调用 sendcloud 通知
++    :param path:
++    :param param:
++    :return:
++    """
++
++    param['accessKey'] = accessKey
+ 
+     param['signature'] = _signature(param)
+ 
+-    r = requests.get(mail_url, params=param)
++    url = 'http://api.notice.sendcloud.net' + path
++
++    r = requests.get(url, params=param)
+ 
+     try:
+         result = r.json()
+-        print("sendcloud:", result)
++        print("sendcloud:", result, param)
+     except Exception, ex:
+-        print("sendcloud:ex:", ex, param)
++        print("sendcloud:ex:", ex)
+ 
+     return result['statusCode'] == 200
++
++
++def send_mail(title, msg, mail_from=None, email_to=None, fail_silently=True):
++    """
++    发送邮件
++    :param title:
++    :param msg:
++    :param mail_from:
++    :param email_to:
++    :param fail_silently:
++    :return:
++    """
++    param = {
++        'nickNames': ';'.join(email_to),
++        'subject': title,
++        'content': msg,
++    }
++
++    call_sendcloud_api('/mailapi/send', param)
+-- 
+2.2.1
+
+From 4efd5e90db35b51f7db41daa2ae40d162a0ccc1c Mon Sep 17 00:00:00 2001
+From: imocat <imocat@qq.com>
+Date: Sat, 30 Sep 2017 15:32:05 +0800
+Subject: [PATCH] =?UTF-8?q?=E6=B5=8B=E8=AF=95endcloud=20API?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ jumpserver/sendcloud_notice.py | 19 +++++++++++--------
+ 1 file changed, 11 insertions(+), 8 deletions(-)
+
+diff --git a/jumpserver/sendcloud_notice.py b/jumpserver/sendcloud_notice.py
+index fb5e7a1..c69b44d 100644
+--- a/jumpserver/sendcloud_notice.py
++++ b/jumpserver/sendcloud_notice.py
+@@ -7,8 +7,6 @@ from settings import SENDCLOUD_ACCESS_KEY, SENDCLOUD_SECRET_KEY
+ accessKey = SENDCLOUD_ACCESS_KEY
+ secretKey = SENDCLOUD_SECRET_KEY
+ 
+-sendcloud_api_url = 'https://api.notice.sendcloud.net'
+-
+ 
+ def _signature(param):
+     param_keys = list(param.keys())
+@@ -29,17 +27,22 @@ def _signature(param):
+ 
+ def get_user(mail):
+     param = {
+-
++        'nickname': mail
+     }
+-
+     call_sendcloud_api('/linkmanMember/list', param)
+ 
+ 
+ def add_user(mail):
++    param = {
++        'nickname': mail
++    }
+     pass
+ 
+ 
+ def update_user(mail):
++    param = {
++        'nickname': mail
++    }
+     pass
+ 
+ 
+@@ -55,12 +58,12 @@ def call_sendcloud_api(path, param):
+ 
+     param['signature'] = _signature(param)
+ 
+-    url = 'http://api.notice.sendcloud.net' + path
++    url = 'http://api.notice.sendcloud.net' + ('' if path.startswith('/') else '/') + path
+ 
+-    r = requests.get(url, params=param)
++    response = requests.get(url, params=param)
+ 
+     try:
+-        result = r.json()
++        result = response.json()
+         print("sendcloud:", result, param)
+     except Exception, ex:
+         print("sendcloud:ex:", ex)
+@@ -84,4 +87,4 @@ def send_mail(title, msg, mail_from=None, email_to=None, fail_silently=True):
+         'content': msg,
+     }
+ 
+-    call_sendcloud_api('/mailapi/send', param)
++    return call_sendcloud_api('/mailapi/send', param)
+-- 
+2.2.1
+
+From 5d38f4978052e4c459b828c3e8150df12f6c980b Mon Sep 17 00:00:00 2001
+From: imocat <imocat@qq.com>
+Date: Sat, 30 Sep 2017 15:41:27 +0800
+Subject: [PATCH] =?UTF-8?q?=E5=90=8C=E6=AD=A5=E6=96=B0=E5=A2=9Esendcloud?=
+ =?UTF-8?q?=20notice=E7=94=A8=E6=88=B7?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ jumpserver/api.py              |  2 +-
+ jumpserver/sendcloud_notice.py | 21 +++++++++------------
+ juser/user_api.py              |  2 ++
+ 3 files changed, 12 insertions(+), 13 deletions(-)
+
+diff --git a/jumpserver/api.py b/jumpserver/api.py
+index cca930e..77b1859 100644
+--- a/jumpserver/api.py
++++ b/jumpserver/api.py
+@@ -24,7 +24,7 @@ from jperm.models import PermRule, PermRole
+ from jumpserver.models import Setting
+ from django.http import HttpResponseRedirect
+ from django.shortcuts import render_to_response
+-from sendcloud_notice import send_mail
++from sendcloud_notice import send_mail,add_notice_user
+ from django.core.urlresolvers import reverse
+ 
+ 
+diff --git a/jumpserver/sendcloud_notice.py b/jumpserver/sendcloud_notice.py
+index c69b44d..d992b6a 100644
+--- a/jumpserver/sendcloud_notice.py
++++ b/jumpserver/sendcloud_notice.py
+@@ -2,6 +2,8 @@
+ 
+ import hashlib
+ 
++import requests
++
+ from settings import SENDCLOUD_ACCESS_KEY, SENDCLOUD_SECRET_KEY
+ 
+ accessKey = SENDCLOUD_ACCESS_KEY
+@@ -25,25 +27,20 @@ def _signature(param):
+     return signature
+ 
+ 
+-def get_user(mail):
+-    param = {
+-        'nickname': mail
+-    }
+-    call_sendcloud_api('/linkmanMember/list', param)
+-
+-
+-def add_user(mail):
++def add_notice_user(mail):
+     param = {
+-        'nickname': mail
++        'nickName': mail,
++        'email': mail
+     }
+-    pass
++    return call_sendcloud_api('/linkmanMember/add', param)
+ 
+ 
+ def update_user(mail):
+     param = {
+-        'nickname': mail
++        'nickName': mail,
++        'email': mail
+     }
+-    pass
++    return call_sendcloud_api('/linkmanMember/modify', param)
+ 
+ 
+ def call_sendcloud_api(path, param):
+diff --git a/juser/user_api.py b/juser/user_api.py
+index e22ee70..fa7cb35 100644
+--- a/juser/user_api.py
++++ b/juser/user_api.py
+@@ -172,6 +172,8 @@ def user_add_mail(user, kwargs):
+         说明： 请登陆跳板机后台下载密钥, 然后使用密钥登陆跳板机！
+     """ % (user.name, user.username, user_role.get(user.role, u'普通用户'),
+            kwargs.get('password'), kwargs.get('ssh_key_pwd'), URL, user.uuid)
++
++    add_notice_user([user.email])
+     send_mail(mail_title, mail_msg, MAIL_FROM, [user.email], fail_silently=False)
+ 
+ 
+-- 
+2.2.1
+
+From e595064c2db225b0772841cf12dbe1982f3213e2 Mon Sep 17 00:00:00 2001
+From: imocat <imocat@qq.com>
+Date: Sat, 30 Sep 2017 16:11:29 +0800
+Subject: [PATCH] =?UTF-8?q?=E4=BD=BF=E7=94=A8logger=E8=BE=93=E5=87=BA?=
+ =?UTF-8?q?=E6=97=A5=E5=BF=97?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ jumpserver/sendcloud_notice.py | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/jumpserver/sendcloud_notice.py b/jumpserver/sendcloud_notice.py
+index d992b6a..e473ddd 100644
+--- a/jumpserver/sendcloud_notice.py
++++ b/jumpserver/sendcloud_notice.py
+@@ -1,9 +1,11 @@
+ # coding: utf-8
+ 
+ import hashlib
++import json
+ 
+ import requests
+ 
++from api import logger
+ from settings import SENDCLOUD_ACCESS_KEY, SENDCLOUD_SECRET_KEY
+ 
+ accessKey = SENDCLOUD_ACCESS_KEY
+@@ -59,11 +61,13 @@ def call_sendcloud_api(path, param):
+ 
+     response = requests.get(url, params=param)
+ 
++    logger.info("sendcloud", url, json.dumps(param))
++
+     try:
+         result = response.json()
+-        print("sendcloud:", result, param)
++        logger.info("sendcloud", result)
+     except Exception, ex:
+-        print("sendcloud:ex:", ex)
++        logger.error("sendcloud", result, ex)
+ 
+     return result['statusCode'] == 200
+ 
+-- 
+2.2.1
+
+From c5a616743c69fe80f7fc1180f822ce125af98c62 Mon Sep 17 00:00:00 2001
+From: imocat <imocat@qq.com>
+Date: Sat, 30 Sep 2017 16:14:30 +0800
+Subject: [PATCH] =?UTF-8?q?=E6=B5=8B=E8=AF=95=20logger?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ jumpserver/sendcloud_notice.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/jumpserver/sendcloud_notice.py b/jumpserver/sendcloud_notice.py
+index e473ddd..77ceadd 100644
+--- a/jumpserver/sendcloud_notice.py
++++ b/jumpserver/sendcloud_notice.py
+@@ -5,7 +5,7 @@ import json
+ 
+ import requests
+ 
+-from api import logger
++from api import *
+ from settings import SENDCLOUD_ACCESS_KEY, SENDCLOUD_SECRET_KEY
+ 
+ accessKey = SENDCLOUD_ACCESS_KEY
+-- 
+2.2.1
+
+From 3ab3b38674d8baef2fc759c90336777124410750 Mon Sep 17 00:00:00 2001
+From: imocat <imocat@qq.com>
+Date: Sat, 30 Sep 2017 16:36:31 +0800
+Subject: [PATCH] =?UTF-8?q?=E5=85=B3=E9=97=AD=20DEBUG=20=E6=A8=A1=E5=BC=8F?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ jumpserver/sendcloud_notice.py | 8 +++-----
+ jumpserver/settings.py         | 4 ++--
+ 2 files changed, 5 insertions(+), 7 deletions(-)
+
+diff --git a/jumpserver/sendcloud_notice.py b/jumpserver/sendcloud_notice.py
+index 77ceadd..fd4a6c2 100644
+--- a/jumpserver/sendcloud_notice.py
++++ b/jumpserver/sendcloud_notice.py
+@@ -1,11 +1,9 @@
+ # coding: utf-8
+ 
+ import hashlib
+-import json
+ 
+ import requests
+ 
+-from api import *
+ from settings import SENDCLOUD_ACCESS_KEY, SENDCLOUD_SECRET_KEY
+ 
+ accessKey = SENDCLOUD_ACCESS_KEY
+@@ -61,13 +59,13 @@ def call_sendcloud_api(path, param):
+ 
+     response = requests.get(url, params=param)
+ 
+-    logger.info("sendcloud", url, json.dumps(param))
++    print("sendcloud", url, param)
+ 
+     try:
+         result = response.json()
+-        logger.info("sendcloud", result)
++        print("sendcloud", result)
+     except Exception, ex:
+-        logger.error("sendcloud", result, ex)
++        print("sendcloud", result, ex)
+ 
+     return result['statusCode'] == 200
+ 
+diff --git a/jumpserver/settings.py b/jumpserver/settings.py
+index c1aa44c..ea4bebc 100644
+--- a/jumpserver/settings.py
++++ b/jumpserver/settings.py
+@@ -59,9 +59,9 @@ except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
+ SECRET_KEY = '!%=t81uof5rhmtpi&(zr=q^fah#$enny-c@mswz49l42j0o49-'
+ 
+ # SECURITY WARNING: don't run with debug turned on in production!
+-DEBUG = True
++DEBUG = False
+ 
+-TEMPLATE_DEBUG = True
++TEMPLATE_DEBUG = False
+ 
+ ALLOWED_HOSTS = ['0.0.0.0/8']
+ 
+-- 
+2.2.1
+
+From 98c6af5f7f1aab24127c8da8b75ba901411d4eab Mon Sep 17 00:00:00 2001
+From: imocat <imocat@qq.com>
+Date: Sat, 30 Sep 2017 16:43:28 +0800
+Subject: [PATCH] =?UTF-8?q?=E4=BF=AE=E5=A4=8D=E6=B7=BB=E5=8A=A0=E7=94=A8?=
+ =?UTF-8?q?=E6=88=B7=E9=94=99=E8=AF=AF=E7=9A=84bug?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ jumpserver/sendcloud_notice.py | 7 ++++---
+ jumpserver/settings.py         | 2 +-
+ juser/user_api.py              | 2 +-
+ 3 files changed, 6 insertions(+), 5 deletions(-)
+
+diff --git a/jumpserver/sendcloud_notice.py b/jumpserver/sendcloud_notice.py
+index fd4a6c2..c135ab5 100644
+--- a/jumpserver/sendcloud_notice.py
++++ b/jumpserver/sendcloud_notice.py
+@@ -1,6 +1,7 @@
+ # coding: utf-8
+ 
+ import hashlib
++import json
+ 
+ import requests
+ 
+@@ -59,13 +60,13 @@ def call_sendcloud_api(path, param):
+ 
+     response = requests.get(url, params=param)
+ 
+-    print("sendcloud", url, param)
++    print("sendcloud", url, json.dumps(param))
+ 
+     try:
+         result = response.json()
+-        print("sendcloud", result)
++        print("sendcloud", json.dumps(result))
+     except Exception, ex:
+-        print("sendcloud", result, ex)
++        print("sendcloud", json.dumps(result), ex)
+ 
+     return result['statusCode'] == 200
+ 
+diff --git a/jumpserver/settings.py b/jumpserver/settings.py
+index ea4bebc..cb31ee5 100644
+--- a/jumpserver/settings.py
++++ b/jumpserver/settings.py
+@@ -59,7 +59,7 @@ except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
+ SECRET_KEY = '!%=t81uof5rhmtpi&(zr=q^fah#$enny-c@mswz49l42j0o49-'
+ 
+ # SECURITY WARNING: don't run with debug turned on in production!
+-DEBUG = False
++DEBUG = True
+ 
+ TEMPLATE_DEBUG = False
+ 
+diff --git a/juser/user_api.py b/juser/user_api.py
+index fa7cb35..e67e53d 100644
+--- a/juser/user_api.py
++++ b/juser/user_api.py
+@@ -173,7 +173,7 @@ def user_add_mail(user, kwargs):
+     """ % (user.name, user.username, user_role.get(user.role, u'普通用户'),
+            kwargs.get('password'), kwargs.get('ssh_key_pwd'), URL, user.uuid)
+ 
+-    add_notice_user([user.email])
++    add_notice_user(user.email)
+     send_mail(mail_title, mail_msg, MAIL_FROM, [user.email], fail_silently=False)
+ 
+ 
+-- 
+2.2.1
+

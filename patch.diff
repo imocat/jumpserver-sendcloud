@@ -1,5 +1,5 @@
 From 15bae55fbedc12a24e36cf1aa44a7570029f0dda Mon Sep 17 00:00:00 2001
-From: imocat <imocat@qq.com>
+From: aray <aray@doupai.cc>
 Date: Sat, 30 Sep 2017 15:00:23 +0800
 Subject: [PATCH] =?UTF-8?q?=E4=BD=BF=E7=94=A8=20sendcloud=20=E5=8F=91?=
  =?UTF-8?q?=E9=80=81=E9=82=AE=E4=BB=B6?=
@@ -135,7 +135,7 @@ index 0000000..680afdb
 2.2.1
 
 From 17cccf2f0af4675f3960532eebb6e4ba8e9338fe Mon Sep 17 00:00:00 2001
-From: imocat <imocat@qq.com>
+From: aray <aray@doupai.cc>
 Date: Sat, 30 Sep 2017 15:05:24 +0800
 Subject: [PATCH] =?UTF-8?q?=E4=BF=AE=E6=94=B9=20sendcloud=20=E9=85=8D?=
  =?UTF-8?q?=E7=BD=AE=E4=BF=A1=E6=81=AF=E8=8E=B7=E5=8F=96=E6=96=B9=E5=BC=8F?=
@@ -224,7 +224,7 @@ index e83de85..c1aa44c 100644
 2.2.1
 
 From 530ae1201771180cd82cc0b92b191562b2d008f5 Mon Sep 17 00:00:00 2001
-From: imocat <imocat@qq.com>
+From: aray <aray@doupai.cc>
 Date: Sat, 30 Sep 2017 15:10:40 +0800
 Subject: [PATCH] =?UTF-8?q?=E4=BF=AE=E5=A4=8D=E4=BD=BF=E7=94=A8pychary?=
  =?UTF-8?q?=E6=A0=BC=E5=BC=8F=E5=8C=96=E5=90=8E=EF=BC=8C=E5=B0=86api.py?=
@@ -301,7 +301,7 @@ index 54d39b5..cca930e 100644
 2.2.1
 
 From 8c28c799cd102ad63081740e604ebd7bd01a23ae Mon Sep 17 00:00:00 2001
-From: imocat <imocat@qq.com>
+From: aray <aray@doupai.cc>
 Date: Sat, 30 Sep 2017 15:14:36 +0800
 Subject: [PATCH] =?UTF-8?q?=E8=BE=93=E5=87=BAsendcloud=E5=8F=91=E9=80=81?=
  =?UTF-8?q?=E9=94=99=E8=AF=AF=E6=97=A5=E5=BF=97?=
@@ -334,7 +334,7 @@ index 653ba9b..041eac6 100644
 2.2.1
 
 From bc38fd17fd2c7d9d4d9d6212b7f3960535d4693e Mon Sep 17 00:00:00 2001
-From: imocat <imocat@qq.com>
+From: aray <aray@doupai.cc>
 Date: Sat, 30 Sep 2017 15:16:12 +0800
 Subject: [PATCH] =?UTF-8?q?=E8=BE=93=E5=87=BAsendcloud=E6=97=A5=E5=BF=97?=
 MIME-Version: 1.0
@@ -361,7 +361,7 @@ index 041eac6..712a1c0 100644
 2.2.1
 
 From ffc0a7b106d4db5ee4ec2e43c09ab2a4d79dbcdd Mon Sep 17 00:00:00 2001
-From: imocat <imocat@qq.com>
+From: aray <aray@doupai.cc>
 Date: Sat, 30 Sep 2017 15:27:19 +0800
 Subject: [PATCH] =?UTF-8?q?=E8=B0=83=E6=95=B4=20=E5=8F=91=E9=80=81?=
  =?UTF-8?q?=E9=82=AE=E4=BB=B6=E6=8E=A5=E5=8F=A3?=
@@ -471,7 +471,7 @@ index 712a1c0..fb5e7a1 100644
 2.2.1
 
 From 4efd5e90db35b51f7db41daa2ae40d162a0ccc1c Mon Sep 17 00:00:00 2001
-From: imocat <imocat@qq.com>
+From: aray <aray@doupai.cc>
 Date: Sat, 30 Sep 2017 15:32:05 +0800
 Subject: [PATCH] =?UTF-8?q?=E6=B5=8B=E8=AF=95endcloud=20API?=
 MIME-Version: 1.0
@@ -546,7 +546,7 @@ index fb5e7a1..c69b44d 100644
 2.2.1
 
 From 5d38f4978052e4c459b828c3e8150df12f6c980b Mon Sep 17 00:00:00 2001
-From: imocat <imocat@qq.com>
+From: aray <aray@doupai.cc>
 Date: Sat, 30 Sep 2017 15:41:27 +0800
 Subject: [PATCH] =?UTF-8?q?=E5=90=8C=E6=AD=A5=E6=96=B0=E5=A2=9Esendcloud?=
  =?UTF-8?q?=20notice=E7=94=A8=E6=88=B7?=
@@ -636,7 +636,7 @@ index e22ee70..fa7cb35 100644
 2.2.1
 
 From e595064c2db225b0772841cf12dbe1982f3213e2 Mon Sep 17 00:00:00 2001
-From: imocat <imocat@qq.com>
+From: aray <aray@doupai.cc>
 Date: Sat, 30 Sep 2017 16:11:29 +0800
 Subject: [PATCH] =?UTF-8?q?=E4=BD=BF=E7=94=A8logger=E8=BE=93=E5=87=BA?=
  =?UTF-8?q?=E6=97=A5=E5=BF=97?=
@@ -684,7 +684,7 @@ index d992b6a..e473ddd 100644
 2.2.1
 
 From c5a616743c69fe80f7fc1180f822ce125af98c62 Mon Sep 17 00:00:00 2001
-From: imocat <imocat@qq.com>
+From: aray <aray@doupai.cc>
 Date: Sat, 30 Sep 2017 16:14:30 +0800
 Subject: [PATCH] =?UTF-8?q?=E6=B5=8B=E8=AF=95=20logger?=
 MIME-Version: 1.0
@@ -712,7 +712,7 @@ index e473ddd..77ceadd 100644
 2.2.1
 
 From 3ab3b38674d8baef2fc759c90336777124410750 Mon Sep 17 00:00:00 2001
-From: imocat <imocat@qq.com>
+From: aray <aray@doupai.cc>
 Date: Sat, 30 Sep 2017 16:36:31 +0800
 Subject: [PATCH] =?UTF-8?q?=E5=85=B3=E9=97=AD=20DEBUG=20=E6=A8=A1=E5=BC=8F?=
 MIME-Version: 1.0
@@ -777,7 +777,7 @@ index c1aa44c..ea4bebc 100644
 2.2.1
 
 From 98c6af5f7f1aab24127c8da8b75ba901411d4eab Mon Sep 17 00:00:00 2001
-From: imocat <imocat@qq.com>
+From: aray <aray@doupai.cc>
 Date: Sat, 30 Sep 2017 16:43:28 +0800
 Subject: [PATCH] =?UTF-8?q?=E4=BF=AE=E5=A4=8D=E6=B7=BB=E5=8A=A0=E7=94=A8?=
  =?UTF-8?q?=E6=88=B7=E9=94=99=E8=AF=AF=E7=9A=84bug?=
